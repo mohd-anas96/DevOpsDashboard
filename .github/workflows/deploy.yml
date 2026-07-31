@@ -1,0 +1,54 @@
+name: DevOps Dashboard CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      #################################################
+      # Backend
+      #################################################
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Restart Backend
+        working-directory: backend
+        shell: powershell
+        run: |
+          pm2 restart devops-backend
+
+      #################################################
+      # Frontend
+      #################################################
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build React
+        working-directory: frontend
+        run: npm run build
+
+      - name: Copy Build to Deployment Folder
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path C:\Deployments\DevOpsDashboard\frontend
+          Copy-Item frontend\dist\* C:\Deployments\DevOpsDashboard\frontend -Recurse -Force
+
+      - name: Deployment Finished
+        run: echo "Deployment completed successfully!"
