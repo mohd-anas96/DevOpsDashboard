@@ -5,11 +5,19 @@ on:
     branches:
       - main
 
+############################################################
+# BUILD
+############################################################
+
 jobs:
-  deploy:
+
+  build:
+
+    name: Build
     runs-on: self-hosted
 
     steps:
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -18,46 +26,118 @@ jobs:
         with:
           node-version: 22
 
-      #################################################
-      # Backend
-      #################################################
-
       - name: Install Backend Dependencies
         working-directory: backend
         run: npm install
-
-      #################################################
-      # Frontend
-      #################################################
 
       - name: Install Frontend Dependencies
         working-directory: frontend
         run: npm install
 
-      - name: Build React
+      - name: Build React Application
         working-directory: frontend
         run: npm run build
 
-      #################################################
-      # Deploy to Local Project
-      #################################################
+      - name: Upload React Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-build
+          path: frontend/dist
+
+############################################################
+# TEST
+############################################################
+
+  test:
+
+    name: Test
+    runs-on: self-hosted
+
+    needs: build
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Backend Validation
+        working-directory: backend
+        run: npm test
+
+      - name: Frontend Lint
+        working-directory: frontend
+        run: npm run lint
+
+############################################################
+# DEPLOY
+############################################################
+
+  deploy:
+
+    name: Deploy
+    runs-on: self-hosted
+
+    needs: test
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download React Build
+        uses: actions/download-artifact@v4
+        with:
+          name: react-build
+          path: frontend/dist
 
       - name: Copy React Build
         shell: powershell
         run: |
+
           $project = "C:\Projects\DevOpsDashboard"
 
-          Remove-Item "$project\backend\dist" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "$project\backend\dist" `
+            -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
 
-          New-Item -ItemType Directory -Force -Path "$project\backend\dist"
+          New-Item `
+            -ItemType Directory `
+            -Force `
+            -Path "$project\backend\dist"
 
-          Copy-Item frontend\dist\* "$project\backend\dist" -Recurse -Force
+          Copy-Item `
+            "frontend\dist\*" `
+            "$project\backend\dist" `
+            -Recurse `
+            -Force
 
       - name: Restart Backend
         shell: powershell
         run: |
+
           cd C:\Projects\DevOpsDashboard\backend
+
           pm2 restart devops-backend
 
-      - name: Deployment Finished
+      - name: Verify PM2 Status
+        shell: powershell
+        run: |
+
+          pm2 status
+
+      - name: Deployment Completed
         run: echo "Deployment completed successfully!"
