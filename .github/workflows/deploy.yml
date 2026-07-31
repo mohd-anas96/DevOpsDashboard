@@ -10,33 +10,18 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      #################################################
-      # Backend
-      #################################################
-
-      - name: Install Backend Dependencies
+      - name: Install Backend
         working-directory: backend
         run: npm install
 
-      - name: Restart Backend
-        working-directory: backend
-        shell: powershell
-        run: |
-          pm2 restart devops-backend
-
-      #################################################
-      # Frontend
-      #################################################
-
-      - name: Install Frontend Dependencies
+      - name: Install Frontend
         working-directory: frontend
         run: npm install
 
@@ -44,11 +29,18 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Copy Build to Deployment Folder
+      - name: Copy React Build
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path C:\Deployments\DevOpsDashboard\frontend
-          Copy-Item frontend\dist\* C:\Deployments\DevOpsDashboard\frontend -Recurse -Force
+          Remove-Item backend\dist -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path backend\dist
+          Copy-Item frontend\dist\* backend\dist -Recurse -Force
+
+      - name: Restart Backend
+        working-directory: backend
+        shell: powershell
+        run: |
+          pm2 restart devops-backend
 
       - name: Deployment Finished
         run: echo "Deployment completed successfully!"
