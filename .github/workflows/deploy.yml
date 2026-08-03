@@ -73,11 +73,11 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      - name: Backend Validation
+      - name: Run Backend Tests
         working-directory: backend
         run: npm test
 
-      - name: Frontend Lint
+      - name: Run Frontend Lint
         working-directory: frontend
         run: npm run lint
 
@@ -85,63 +85,59 @@ jobs:
 # DEPLOY
 ############################################################
 
-deploy:
+  deploy:
 
-  name: Deploy
+    name: Deploy
 
-  runs-on: self-hosted
+    runs-on: self-hosted
 
-  needs: test
+    needs: test
 
-  environment:
-    name: Production
+    environment:
+      name: Production
 
-  steps:
+    steps:
 
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Download React Build
-      uses: actions/download-artifact@v4
-      with:
-        name: react-build
-        path: frontend/dist
+      - name: Download React Build
+        uses: actions/download-artifact@v4
+        with:
+          name: react-build
+          path: frontend/dist
 
-    - name: Copy React Build
-      shell: powershell
-      run: |
+      - name: Copy React Build
+        shell: powershell
+        run: |
+          $project = "C:\Projects\DevOpsDashboard"
 
-        $project = "C:\Projects\DevOpsDashboard"
+          Remove-Item "$project\backend\dist" `
+            -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
 
-        Remove-Item "$project\backend\dist" `
-          -Recurse `
-          -Force `
-          -ErrorAction SilentlyContinue
+          New-Item `
+            -ItemType Directory `
+            -Force `
+            -Path "$project\backend\dist"
 
-        New-Item `
-          -ItemType Directory `
-          -Force `
-          -Path "$project\backend\dist"
+          Copy-Item `
+            "frontend\dist\*" `
+            "$project\backend\dist" `
+            -Recurse `
+            -Force
 
-        Copy-Item `
-          "frontend\dist\*" `
-          "$project\backend\dist" `
-          -Recurse `
-          -Force
+      - name: Restart Backend
+        shell: powershell
+        run: |
+          cd C:\Projects\DevOpsDashboard\backend
+          pm2 restart devops-backend
 
-    - name: Restart Backend
-      shell: powershell
-      run: |
+      - name: Verify PM2 Status
+        shell: powershell
+        run: |
+          pm2 status
 
-        cd C:\Projects\DevOpsDashboard\backend
-
-        pm2 restart devops-backend
-
-    - name: Verify PM2 Status
-      shell: powershell
-      run: |
-
-        pm2 status
-
-    - name: Deployment Completed
-      run: echo "Deployment completed successfully!"
+      - name: Deployment Completed
+        run: echo "Deployment completed successfully!"

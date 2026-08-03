@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
- "scripts": {
+"scripts": {
   "start": "node app.js",
   "dev": "nodemon app.js",
-  "test": "node -e \"console.log('Backend validation passed')\""
+  "test": "node -e \"require('./app.js'); setTimeout(() => process.exit(0),3000)\""
 },
   "keywords": [],
   "author": "",
