@@ -14,7 +14,7 @@ jobs:
   build:
 
     name: Build
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
 
@@ -51,7 +51,7 @@ jobs:
   test:
 
     name: Test
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     needs: build
 
@@ -85,59 +85,63 @@ jobs:
 # DEPLOY
 ############################################################
 
-  deploy:
+deploy:
 
-    name: Deploy
-    runs-on: self-hosted
+  name: Deploy
 
-    needs: test
+  runs-on: self-hosted
 
-    steps:
+  needs: test
 
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+  environment:
+    name: Production
 
-      - name: Download React Build
-        uses: actions/download-artifact@v4
-        with:
-          name: react-build
-          path: frontend/dist
+  steps:
 
-      - name: Copy React Build
-        shell: powershell
-        run: |
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-          $project = "C:\Projects\DevOpsDashboard"
+    - name: Download React Build
+      uses: actions/download-artifact@v4
+      with:
+        name: react-build
+        path: frontend/dist
 
-          Remove-Item "$project\backend\dist" `
-            -Recurse `
-            -Force `
-            -ErrorAction SilentlyContinue
+    - name: Copy React Build
+      shell: powershell
+      run: |
 
-          New-Item `
-            -ItemType Directory `
-            -Force `
-            -Path "$project\backend\dist"
+        $project = "C:\Projects\DevOpsDashboard"
 
-          Copy-Item `
-            "frontend\dist\*" `
-            "$project\backend\dist" `
-            -Recurse `
-            -Force
+        Remove-Item "$project\backend\dist" `
+          -Recurse `
+          -Force `
+          -ErrorAction SilentlyContinue
 
-      - name: Restart Backend
-        shell: powershell
-        run: |
+        New-Item `
+          -ItemType Directory `
+          -Force `
+          -Path "$project\backend\dist"
 
-          cd C:\Projects\DevOpsDashboard\backend
+        Copy-Item `
+          "frontend\dist\*" `
+          "$project\backend\dist" `
+          -Recurse `
+          -Force
 
-          pm2 restart devops-backend
+    - name: Restart Backend
+      shell: powershell
+      run: |
 
-      - name: Verify PM2 Status
-        shell: powershell
-        run: |
+        cd C:\Projects\DevOpsDashboard\backend
 
-          pm2 status
+        pm2 restart devops-backend
 
-      - name: Deployment Completed
-        run: echo "Deployment completed successfully!"
+    - name: Verify PM2 Status
+      shell: powershell
+      run: |
+
+        pm2 status
+
+    - name: Deployment Completed
+      run: echo "Deployment completed successfully!"
